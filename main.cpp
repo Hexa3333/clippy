@@ -31,8 +31,8 @@ int main(int argc, char** argv) {
 
     int ffmpeg_instance_iter = 0;
     while (1) {
-        std::string ffmpeg_instance_log = "/tmp/clippy/log-" + std::to_string(ffmpeg_instance_iter) + ".txt";
-        int ffmpeg_instance_log_fd = open(ffmpeg_instance_log.c_str(), O_CREAT | O_TRUNC | O_RDWR, S_IRUSR);
+        std::string ffmpeg_instance_log_filename = "/tmp/clippy/log-" + std::to_string(ffmpeg_instance_iter) + ".txt";
+        int ffmpeg_instance_log_fd = open(ffmpeg_instance_log_filename.c_str(), O_CREAT | O_TRUNC | O_RDWR, S_IRUSR | S_IWUSR);
 
         pid_t ffmpeg = fork();
         if (ffmpeg == 0) {
@@ -43,8 +43,8 @@ int main(int argc, char** argv) {
 
             // exec ffmpeg
             // ffmpeg -video_size 1920x1080 -f x11grab -i :0.0 -c:v libx264 -f segment -segment_format mp4 -segment_time 5 -reset_timestamps 1 -segment_wrap 10 /tmp/clippy-output-N-%01d.mp4
-            std::string output_filename = "/tmp/clippy/output-" + std::to_string(ffmpeg_instance_iter) + "-%01d.mp4";
-            execl("/usr/bin/ffmpeg", "ffmpeg", "-y", "-video_size", "1920x1080", "-f", "x11grab", "-i", ":0.0", "-c:v", "libx264", "-f", "segment", "-segment_format", "mp4", "-segment_time", "5", "-reset_timestamps", "1", "-segment_wrap", "10", output_filename.c_str(), NULL);
+            std::string ffmpeg_output_filename = "/tmp/clippy/capture-" + std::to_string(ffmpeg_instance_iter) + "-%01d.mp4";
+            execl("/usr/bin/ffmpeg", "ffmpeg", "-y", "-video_size", "1920x1080", "-f", "x11grab", "-i", ":0.0", "-c:v", "libx264", "-f", "segment", "-segment_format", "mp4", "-segment_time", "5", "-reset_timestamps", "1", "-segment_wrap", "10", ffmpeg_output_filename.c_str(), NULL);
 
             // exec fail
             std::cout << "[Child] ffmpeg exec failed: " << strerror(errno) << "\n";
