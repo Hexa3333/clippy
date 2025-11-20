@@ -1,3 +1,4 @@
+#include <cstdio>
 #include <iostream>
 #include <cstring>
 #include <getopt.h>
@@ -31,6 +32,28 @@ sighandler_t concatenate(int sig) {
     ++G_ffmpeg_instance_iter;
 
     // Read instance log fd and gather which clips should be thingied. Concat video.
+    FILE* ffmpeg_log = fdopen(G_ffmpeg_instance_log_fd, "r");
+    if (!ffmpeg_log) {
+        std::cout << "[Master] ffmpeg log fd failed.\n";
+        return 0;
+    }
+    fseek(ffmpeg_log, 0, SEEK_SET);
+
+    // TODO: Optimize. Perhaps by reading from the end.
+    char line[4096];
+    char last_segment_filename[64];
+    while (fgets(line, 4096, ffmpeg_log)) {
+        char* last_segment_filename_opening;
+        if ((last_segment_filename_opening = strstr(line, "Opening"))) {
+            char* start = strchr(last_segment_filename_opening, '\'');
+            char* end = strchr(start+1, '\'');
+            if (start && end) {
+                size_t len = end - start -1;
+                memcpy(last_segment_filename, start+1, len);
+                last_segment_filename[len] = '\0';
+            }
+        }
+    }
 
     G_concatenated = true;
     return 0;
@@ -78,7 +101,6 @@ int main(int argc, char** argv) {
             std::cout << "[Master] fork failed: " << strerror(errno) << "\n";
             return -1;
         } else {
-            close(G_ffmpeg_instance_log_fd);
             std::cout << "[Master] Waiting on rec event.\n";
 
             // While rec event not received, wait
