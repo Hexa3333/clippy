@@ -1,9 +1,11 @@
 #include <cstdio>
+#include <fstream>
 #include <iostream>
 #include <cstring>
 #include <getopt.h>
 #include <string>
 #include <unistd.h>
+#include <vector>
 #include <wait.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -20,6 +22,8 @@ static pid_t G_ffmpeg;
 struct Config {
     int framerate;
 };
+
+static int G_CycleCount = 10;
 
 static int G_concatenated = false;
 sighandler_t concatenate(int sig) {
@@ -53,6 +57,30 @@ sighandler_t concatenate(int sig) {
                 last_segment_filename[len] = '\0';
             }
         }
+    }
+
+    // Extract the iter and cycle of the last segment
+    int iteration, last_cycle;
+    if (sscanf(last_segment_filename, "%*[^0-9]%d-%d", &iteration, &last_cycle) != 2) {
+        std::cout << "[Master] Error parsing last segment iteration and/or cycle.\n";
+        return 0;
+    }
+
+    // NOTE: This assumes all cycles are full. They may not necessarily be.
+    std::vector<std::string> segment_filenames_to_concatenate;
+    segment_filenames_to_concatenate.reserve(G_CycleCount);
+
+    for (int i = 0; i < G_CycleCount; ++i) {
+        int cycle_iter = (last_cycle+1+i) % G_CycleCount;
+        segment_filenames_to_concatenate.push_back(
+                std::string("/tmp/clippy/capture" + std::to_string(iteration) + "-" + std::to_string(cycle_iter) + ".mp4")
+                );
+    }
+
+    std::ofstream concat_file("/tmp/clippy/concat.txt", std::ios::trunc);
+    for (const auto& s : segment_filenames_to_concatenate) {
+        std::string a = "file \'" + s + "\'\n";
+        concat_file.write(a.data(), a.size());
     }
 
     G_concatenated = true;
