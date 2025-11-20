@@ -73,7 +73,7 @@ sighandler_t concatenate(int sig) {
     for (int i = 0; i < G_CycleCount; ++i) {
         int cycle_iter = (last_cycle+1+i) % G_CycleCount;
         segment_filenames_to_concatenate.push_back(
-                std::string("/tmp/clippy/capture" + std::to_string(iteration) + "-" + std::to_string(cycle_iter) + ".mp4")
+                std::string("/tmp/clippy/capture-" + std::to_string(iteration) + "-" + std::to_string(cycle_iter) + ".mp4")
                 );
     }
 
@@ -81,6 +81,19 @@ sighandler_t concatenate(int sig) {
     for (const auto& s : segment_filenames_to_concatenate) {
         std::string a = "file \'" + s + "\'\n";
         concat_file.write(a.data(), a.size());
+    }
+
+    concat_file.flush();
+    pid_t process_concat = fork();
+    if (process_concat == 0) {
+        execl("/usr/bin/ffmpeg", "ffmpeg", "-f", "concat", "-safe", "0", "-i", "/tmp/clippy/concat.txt", "-c", "copy", "/home/hexa/output.mp4", NULL);
+        perror("what...");
+        std::cerr << "ffmpeg concat spawn failed.\n";
+        std::exit(-1);
+    } else {
+        int wstatus;
+        waitpid(process_concat, &wstatus, 0);
+        std::cout << "[Master] ffmpeg (concat) exited with status: " << wstatus << ".\n";
     }
 
     G_concatenated = true;
