@@ -1,4 +1,5 @@
 #include <cstdio>
+#include <ctime>
 #include <fstream>
 #include <iostream>
 #include <cstring>
@@ -83,10 +84,14 @@ sighandler_t concatenate(int sig) {
         concat_file.write(a.data(), a.size());
     }
 
+    time_t time_now = time(NULL);
+    char* time_str = ctime(&time_now);
+
     concat_file.flush();
     pid_t process_concat = fork();
     if (process_concat == 0) {
-        execl("/usr/bin/ffmpeg", "ffmpeg", "-f", "concat", "-safe", "0", "-i", "/tmp/clippy/concat.txt", "-c", "copy", "/home/hexa/output.mp4", NULL);
+        std::string file_path = "/home/hexa/" + std::string(time_str) + ".mp4";
+        execl("/usr/bin/ffmpeg", "ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", "/tmp/clippy/concat.txt", "-c", "copy", file_path.data(), NULL);
         perror("what...");
         std::cerr << "ffmpeg concat spawn failed.\n";
         std::exit(-1);
