@@ -84,14 +84,16 @@ sighandler_t concatenate(int sig) {
         concat_file.write(a.data(), a.size());
     }
 
-    time_t time_now = time(NULL);
-    char* time_str = ctime(&time_now);
+    std::time_t time_now = std::time(nullptr);
+    std::string time_str = std::asctime(std::localtime(&time_now));
+    time_str.pop_back(); // get rid of trailing newline
 
     concat_file.flush();
     pid_t process_concat = fork();
     if (process_concat == 0) {
-        std::string file_path = "/home/hexa/" + std::string(time_str) + ".mp4";
-        execl("/usr/bin/ffmpeg", "ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", "/tmp/clippy/concat.txt", "-c", "copy", file_path.data(), NULL);
+        std::string file_path = "/home/hexa/" + time_str + ".mp4";
+        execl("/usr/bin/ffmpeg", "ffmpeg", "-y",
+                "-f", "concat", "-safe", "0", "-i", "/tmp/clippy/concat.txt", "-c", "copy", file_path.data(), NULL);
         perror("what...");
         std::cerr << "ffmpeg concat spawn failed.\n";
         std::exit(-1);
